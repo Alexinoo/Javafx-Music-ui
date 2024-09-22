@@ -269,6 +269,25 @@ public class Datasource {
         }
     }
 
+    public List<Album> queryAlbumsForArtistId(int id){
+        try{
+           queryAlbumByArtistId.setInt(1,id);
+           ResultSet resultSet = queryAlbumByArtistId.executeQuery();
+           List<Album> albumsList = new ArrayList<>();
+           while (resultSet.next()){
+               Album album = new Album();
+               album.setId(resultSet.getInt(1));
+               album.setName(resultSet.getString(2));
+               album.setArtistId(id);
+               albumsList.add(album);
+           }
+           return albumsList;
+        }catch (SQLException exc){
+            System.out.println("Query Failed: "+exc.getMessage());
+            return null;
+        }
+    }
+
     public List<String> queryAlbumsForArtist(String artistName, int sortOrder) {
 
         StringBuilder sb = new StringBuilder(QUERY_ALBUMS_BY_ARTIST_START);
