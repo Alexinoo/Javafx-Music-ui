@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7d843b7b-220a-45e5-b3fd-a518d4f93eff" name="Changes" comment="Fix Artist and Preload Records">
+    <list default="true" id="7d843b7b-220a-45e5-b3fd-a518d4f93eff" name="Changes" comment="Implement Artist Query - Show Albums for selected artist">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/sample/javafxmusicui/Controller.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/sample/javafxmusicui/Controller.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/sample/javafxmusicui/model/Album.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/sample/javafxmusicui/model/Album.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/sample/javafxmusicui/model/Datasource.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/sample/javafxmusicui/model/Datasource.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/sample/javafxmusicui/main.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/sample/javafxmusicui/main.fxml" afterDir="false" />
     </list>
@@ -83,13 +82,22 @@
       <option name="project" value="LOCAL" />
       <updated>1727014471176</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Implement Artist Query - Show Albums for selected artist">
+      <option name="closed" value="true" />
+      <created>1727016100719</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1727016100719</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Make Datasource Singleton, Override init &amp; stop from Applications class" />
     <MESSAGE value="Add Artists - Bind TableView with the Artist class - Create Task class that lists artist" />
     <MESSAGE value="Fix Artist and Preload Records" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix Artist and Preload Records" />
+    <MESSAGE value="Implement Artist Query - Show Albums for selected artist" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implement Artist Query - Show Albums for selected artist" />
   </component>
 </project>
