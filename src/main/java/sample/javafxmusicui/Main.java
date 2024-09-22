@@ -3,6 +3,7 @@ package sample.javafxmusicui;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import sample.javafxmusicui.model.Datasource;
@@ -13,9 +14,13 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("main.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 800, 600);
+        Parent root = fxmlLoader.load();
+
+        Controller controller = fxmlLoader.getController();
+        controller.listArtists();
+
         stage.setTitle("Music Database");
-        stage.setScene(scene);
+        stage.setScene(new Scene(root, 800, 600));
         stage.show();
     }
 

@@ -77,14 +77,50 @@ import sample.javafxmusicui.model.Datasource;
  *  - Then we're binding the result of the task, the Artist ObservableList to the TableView items property so
  *     that they're bound to each other
  *
+ *
+ *
+ * /// Fix Artist and Preload records
+ * We have binded the results of the Task, the artist's observable list to the TableView items property through
+ *   the listArtist() below , and also adding <cellValueFactory> using the <PropertyValueFactory> in the main.fxml
+ * Because the Controller isn't created until this fxml is loaded, and that happens in the start() and also
+ *   because we want to be sure that the UI has been built before we try and load these results
+ * We'll initiate the query of the artists from the start() in our Main.java class
+ * We'll need access to the controller and change that code to :
+ *
+ *      Parent root = fxmlLoader.load();
+
+        Controller controller = fxmlLoader.getController();
+        controller.listArtists();
+ *
+ *
+ * At the moment if we run this, we're getting an error from our Datasource class and that's because we didn't set
+ *  up our getters properly
+ *  - Update them to return int via id.get() and String via name.get()
+ *
+ *       public int getId() {
+            return id.get();
+          }
+ *
+ * And
+ *       public void setId(int id) {
+            this.id.set(id);
+        }
+ *
+ *  - Do the same thing for the Artist class
+ *
+ * Then create a no args constructor to initialize both the id and the name to avoid getting NullPointerException
+ *
+ * And now the errors disappeared from the Datasource class
  */
 public class Controller {
     @FXML
     private TableView<Artist> artistTable;
 
     public void listArtists(){
-        Task<ObservableList<Artist>> task = new GetAllArtistsTask();
+        GetAllArtistsTask task = new GetAllArtistsTask();
         artistTable.itemsProperty().bind(task.valueProperty());
+
+        new Thread(task).start();
     }
 }
 
