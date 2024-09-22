@@ -119,6 +119,9 @@ public class Datasource {
     public static final String QUERY_ALBUMS_BY_ARTIST_ID = "SELECT * FROM " + TABLE_ALBUMS +
             " WHERE " + COLUMN_ALBUM_ARTIST + " = ? ORDER BY " + COLUMN_ALBUM_NAME + " COLLATE NOCASE";
 
+    public static final String UPDATE_ARTIST_NAME = "UPDATE "+ TABLE_ARTISTS +" SET "+ COLUMN_ARTIST_NAME +
+            " = ? WHERE "+ COLUMN_ARTIST_ID +" = ?";
+
 
     // Initialize connection obj
     private Connection conn;
@@ -132,6 +135,7 @@ public class Datasource {
     private PreparedStatement queryAlbum;
     private PreparedStatement querySong;
     private PreparedStatement queryAlbumByArtistId;
+    private PreparedStatement updateArtistName;
 
     /*
      * Create a variable that will hold that 1 instance of the class , that every other class in the app will use
@@ -198,6 +202,8 @@ public class Datasource {
 
             queryAlbumByArtistId = conn.prepareStatement(QUERY_ALBUMS_BY_ARTIST_ID);
 
+            updateArtistName = conn.prepareStatement(UPDATE_ARTIST_NAME);
+
             return true;
         } catch (SQLException exc) {
             System.out.println("Couldn't connect to database : " + exc.getMessage());
@@ -230,6 +236,9 @@ public class Datasource {
 
             if (queryAlbumByArtistId != null)
                 queryAlbumByArtistId.close();
+
+            if (updateArtistName != null)
+                updateArtistName.close();
 
             if (conn != null)
                 conn.close();
@@ -419,6 +428,20 @@ public class Datasource {
         else
             throw new SQLException("Couldn't get _id for album");
 
+    }
+
+    public boolean updateArtistName(int id , String newName){
+        try{
+            updateArtistName.setString(1,newName);
+            updateArtistName.setInt(2,id);
+            int affectedRecords = updateArtistName.executeUpdate();
+
+            return affectedRecords == 1;
+
+        }catch (SQLException exc){
+            System.out.println("Update Artist name Failed: "+exc.getMessage());
+            return false;
+        }
     }
 
     public void insertSong(String title, String artist, String album, int track) {
