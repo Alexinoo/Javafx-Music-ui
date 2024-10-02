@@ -372,21 +372,42 @@ import java.io.IOException;
  * ////////////////////////////////////////////
  *
  *
- * We have binded the results of the Task, the artist's observable list to the TableView items property through
- *   the listArtist() below , and also adding <cellValueFactory> using the <PropertyValueFactory> in the main.fxml
- * Because the Controller isn't created until this fxml is loaded, and that happens in the start() and also
- *   because we want to be sure that the UI has been built before we try and load these results
- * We'll initiate the query of the artists from the start() in our Main.java class
- * We'll need access to the controller and change that code to :
+ * We have binded the results of the Task, the artist's observable list to the TableView items property through the listArtist() ,
  *
- *      Parent root = fxmlLoader.load();
+ *      Task<ObservableList<Artist>> task = new GetAllArtistsTask();
+        artistTable.itemsProperty().bind(task.valueProperty());
+ *
+ *
+ * and also adding <cellValueFactory> using the <PropertyValueFactory> in the main.fxml
+ *
+ *       <TableColumn prefWidth="${artistTable.width}" text="Name" >
+          <cellValueFactory>
+            <PropertyValueFactory property="name" />
+          </cellValueFactory>
+        </TableColumn>
+ *
+ *
+ * Because the Controller isn't created until this fxml is loaded, and that happens in the start() and also because we want to
+ * be sure that the UI has been built before we try and load these results
+ *
+ * We'll initiate the query of the artists from the start() in our Main.java class
+ * We'll change our code to load fxml first :
+ *
+ *      FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("main.fxml"));
+        Parent root = fxmlLoader.load();
 
+ * Then we'll need access to our Controller , by getting the instance of the controller
+ *
         Controller controller = fxmlLoader.getController();
+
+ * And then query the artist now by calling listArtists()
+
         controller.listArtists();
  *
  *
- * At the moment if we run this, we're getting an error from our Datasource class and that's because we didn't set
- *  up our getters properly
+ * At the moment if we run this, we're getting an error because we're sending and receiving setters and getters SimpleIntegerProperty,
+ *   but we should actually be sending the type, the int and the String to other classes that are using this
+ *
  *  - Update them to return int via id.get() and String via name.get()
  *
  *       public int getId() {
@@ -398,11 +419,32 @@ import java.io.IOException;
             this.id.set(id);
         }
  *
- *  - Do the same thing for the Artist class
+ * In terms of the Setters, we do the same , pass as int and as String arguments
+ * And then to save that back into a SimpleIntegerProperty, we use "this.id.set(id)" and "this.name.set(name)" respectively
  *
- * Then create a no args constructor to initialize both the id and the name to avoid getting NullPointerException
+ *        public void setId(int id) {
+            this.id.set(id);
+          }
  *
- * And now the errors disappeared from the Datasource class
+ *        public void setName(String name) {
+             this.name.set(name);
+          }
+ *
+ *
+ * Then lastly, we need to create a no args constructor to initialize both the id and the name to avoid getting NullPointerException
+ *
+ *      public Artist() {
+            this.id = new SimpleIntegerProperty();
+            this.name = new SimpleStringProperty();
+        }
+ *
+ * And now the errors disappeared from the Datasource class - queryArtist() -
+ * We are creating a new Artist object, using the constructor we've added above , which we can then be sure will initialize both id
+ *  and name fields
+ *
+ *       Artist artist = new Artist();
+         artist.setId(results.getInt(INDEX_ARTIST_ID));
+         artist.setName(results.getString(INDEX_ARTIST_NAME));
  *
  */
 
