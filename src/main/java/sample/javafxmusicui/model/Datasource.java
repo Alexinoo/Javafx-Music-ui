@@ -149,39 +149,6 @@ public class Datasource {
     }
 
     /* Singleton method
-     *
-     * Add a method that every other class will use to access the instance
-     * We can create the singleton instance when we declare the variable or we can create it in the static access
-     *  method
-     * And we'll do just that in this case , and call it getInstance
-     *
-     * When an obj wants to use the Singleton instance, it calls getInstance()
-     * The method checks to see if the singleton instance has been previously created.
-     * IF it has:
-     *  - it returns it
-     * Otherwise
-     *  - creates one and return it
-     *
-     * This is called lazy instantiation because the instance isn't created until the first time it's needed
-     * This is perfectly valid code, but keep in mind that it's not Thread safe
-     * It's possible for a thread to be interrupted after the check for null here
-     * Another thread could run, check for null and create the instance
-     * Then the first thread can run and create the 2nd instance and consequently, our application would have then
-     *  2 instances on the go which then defeats the purpose of using a singleton
-     * So, what we can do here is we can create the instance when the instance variable is declared and that will be
-     *  Thread-safe
-     *
-     * Update
-     *      private static Datasource instance;
-     * To
-     *      private static Datasource instance = new Datasource();
-     *
-     * This is also lazy instantiation because the instance won't be created until the first time the class is loaded
-     * which will be the first time some other instances references the class by calling getInstance()
-     * Now we can update the getInstance() to just return the instance only
-     * Whenever a class now wants to call a method in the Datasource class, it will then do
-     *     Datasource.getInstance().methodName()
-     * That's going to be the calling convention used to access all the methods in this particular class
      */
     public static Datasource getInstance() {
         return instance;
