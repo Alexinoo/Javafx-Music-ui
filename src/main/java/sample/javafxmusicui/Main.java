@@ -226,6 +226,184 @@ import java.io.IOException;
  *
  * And if we run this now, we get the same error message we had previously about not able to connect to the database, and this time round
  *  the USer Interface doesn't appear because we couldn't get access to the database
+ *
+ *
+ * ////////////
+ * Add Artists
+ * ////////////
+ *
+ * So when the application starts, we want display all the artists in the artists table
+ * It's also possible that the user might explicitly ask to see all the artists after they've performed some other query
+ * So consequently, we need to query all the artists when the application starts and also potentially in response to user input
+ * Remember that we always want to perform long tasks on a background thread and not on the Main.java fx application thread
+ * If we recall from the JavaFX section, that when we want to run background threads from a JavaFX application , we need to use Helper
+ *  classes in the javafx.concurrent package
+ *
+ * We'll perform the following steps and not necessarily in any order that Tim is going to read them out
+ *
+ *  1. Create a Task that's going to perform the Database action - Query , Insert or whatever we're doing
+ *  2. Initialize the Task with values required to perform the action ,  if that's necessary
+ *  3. Implement task.call() to perform the action
+ *  4. Bind the call results to the TableView items property
+ *  5. Invoke the Task
+ *
+ * Since we may need to use this task in 2 places,
+ *  i) At start up
+ *  ii) When the user explicitly asks to see all artists,
+ *
+ * And that's why we're not going to use an Anonymous Task class that we create in response to user input
+ * Instead, we'll create GetAllArtistTask class to the controller
+ *
+ * The GetAllArtistsTask is extending Task class, and if we want to use the Data binding to populate the table, the call() which we've
+ *  reconfigured has to return an ObservableArrayList<Artist> - check the imports
+
+ * We've overwritten the call() to call the queryArtist() in Datasource.java file
+ *
+ * This method if we can recall returns a List<Artist>
+ * We don't want to change it to return an ObservableArrayList , because that would violate the separation between the model & UI code.
+ * Instead, the Task is creating an observable list from the list that the queryArtist() returns
+ * We're doing this by calling the observableArrayList() from the FXCollections class and then passing in the list that is returned from
+ *  our Datasource which will then ultimately will give us an ObservableList
+ *
+ * Tim said we can use the Model class as is, and that would be true if we didn't want to take advantage of a data binding,
+ * But since we do want to take advantage of that, we do need to make 1 small change to the Artist class to achieve that
+ * Instead of storing the Artist name in a String, we need to store it as SimpleStringProperty
+ *
+ * This doesn't violate the Model-UI separation because SimpleStringProperty isn't a UI specific class
+ * We could have used it all along actually and we'll do the same for the artist id even though we won't be displaying it
+ * Since the field will now be properties, the Getter and Setter methods are going to change as well
+ *
+ * So let's proceed to the Artist class and make those changes in the Artist class
+ *
+ *      class Artist {
+ *
+ *          private SimpleIntegerProperty id;
+            private final SimpleStringProperty name;
+ *
+ *
+ *          public SimpleIntegerProperty getId() {
+                return id.get();
+            }
+
+            public void setId(SimpleIntegerProperty id) {
+                this.id.set(id);
+            }
+
+            public SimpleStringProperty getName() {
+                return name.get();
+            }
+
+            public void setName(SimpleStringProperty name) {
+                this.name.set(name);
+            }
+ *
+ *      }
+ *
+ * Again we're only doing this because we want to take advantage of data binding
+ *
+ * Since this is a simple application, if we wanted to keep our model classes exactly as they were, then we could do that and we
+ *  would explicitly then set the table items when the task completes
+ *
+ *
+ * There are 2 ways we could set the items
+ *  1. Covered in the Threading section of the course : We could perform Platform.runLater when the queryArtist()
+ *      returns it's results
+ *      - In the Runnable we pass to runLater , we could set the table items
+ *
+ *          artistTable.getItems().setAll(artistResults);
+ *
+ *      - Tim also mentioned that we can do more with tasks than we covered, including running code when the call()
+ *         completes
+ *      - To do that we need to call Task.setOnSucceeded which takes an event handler
+ *      - In our case, we'll pass a lambda and do something like this
+ *
+ *          task.setOnSucceeded(e -> artistTable.getItems().setAll(artistResults));
+ *
+ *      - That's ultimately what we'll going to be doing, making this a little bit easier to call when the call()
+ *         completes
+ *
+ *
+ * //////////
+ * Whenever data binding makes sense to use it , because we don't have to do anything when the task completes,
+ *  it's all handled automatically
+ *
+ * We need to do 1 more thing for data binding to work though, and that is mapping the name field in the Artist
+ *  class to the name column in the table
+ *
+ * We accomplish this by adding a CellValueFactory to the table column in our fxml file
+ * So let's go ahead and update our fxml file
+ *
+ *      <TableColumn prefWidth="${artistTable.width}" text="Name" >
+          <cellValueFactory>
+            <PropertyValueFactory property="name" />
+          </cellValueFactory>
+        </TableColumn>
+ *
+ * So basically we've added a PropertyValueFactory for the name and that maps to the name field in the Artist class
+ *
+ *
+ * ///////////
+ * Controller
+ *
+ * Now we can add a method to the controller that get's the artists
+ *
+ * Create a reference to the artistTable
+
+ *      private TableView<Artist> artistTable;
+ *
+ * Then we need to add the actual method listArtists()
+ *
+ *      Task<ObservableList<Artist>> task = new GetAllArtistsTask();
+        artistTable.itemsProperty().bind(task.valueProperty());
+
+        new Thread(task).start();
+ *
+ *      - We've created a new Task obj by creating GetAllArtistsTask instance
+ *
+ *      - Then we're binding the result of the task, the Artist ObservableList to the TableView items property so
+ *          that they're bound to each other
+ *
+ * We'll start looking at how the listArtists() is going to be invoked because the Controller isn't created until the fxml is
+ *  loaded
+ *
+ *
+ * /////////////////////////////////////////////
+ * /// Fix Artist and Preload records //////////
+ * ////////////////////////////////////////////
+ *
+ *
+ * We have binded the results of the Task, the artist's observable list to the TableView items property through
+ *   the listArtist() below , and also adding <cellValueFactory> using the <PropertyValueFactory> in the main.fxml
+ * Because the Controller isn't created until this fxml is loaded, and that happens in the start() and also
+ *   because we want to be sure that the UI has been built before we try and load these results
+ * We'll initiate the query of the artists from the start() in our Main.java class
+ * We'll need access to the controller and change that code to :
+ *
+ *      Parent root = fxmlLoader.load();
+
+        Controller controller = fxmlLoader.getController();
+        controller.listArtists();
+ *
+ *
+ * At the moment if we run this, we're getting an error from our Datasource class and that's because we didn't set
+ *  up our getters properly
+ *  - Update them to return int via id.get() and String via name.get()
+ *
+ *       public int getId() {
+            return id.get();
+          }
+ *
+ * And
+ *       public void setId(int id) {
+            this.id.set(id);
+        }
+ *
+ *  - Do the same thing for the Artist class
+ *
+ * Then create a no args constructor to initialize both the id and the name to avoid getting NullPointerException
+ *
+ * And now the errors disappeared from the Datasource class
+ *
  */
 
 public class Main extends Application {
