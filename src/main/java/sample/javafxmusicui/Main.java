@@ -446,6 +446,198 @@ import java.io.IOException;
          artist.setId(results.getInt(INDEX_ARTIST_ID));
          artist.setName(results.getString(INDEX_ARTIST_NAME));
  *
+ *
+ * ///////////
+ *
+ * Now, if we run this, it won't work and we won't be able to see our artists
+ *
+ * So Tim poses a challenge to us , Why are we not seeing artists showing here automatically ?
+ *  - We've changed our start() to invoke the listArtists()
+ *  - We've also set CellValueFactory and a PropertyValueFactory to associate that and we should be getting from our artist, should return a name
+ *
+ * /// Solution
+ * We're invoking listArtists() from the start() which is seemingly creating a Task and binds it to our fxml TableView
+ * But the problem here is that we're not kicking off the task
+ *
+ * So what we need to do here is to add below line
+ *
+ *      new Thread(task).start();
+ *
+ * So we need to kick off the task so that it actually goes through and start that for us, and go through the process of retrieving the records
+ *  from SQLite database
+ *
+ * /////
+ * And now if we run this, we're able to get the artists loaded correctly when we boot up our music database
+ *
+ *
+ *
+ * ///////
+ * At this point now, we now know how to perform a potentially long-running query, and bind the results to a table
+ *
+ *
+ *
+ * /////////////////////////
+ *  Implement Artist Query
+ * /////////////////////////
+ *
+ * //////////// Implement show Albums(artist)
+ *
+ * So, what do we need to do when a user presses this button ?
+ * We need to get the id of the selected artist and so the user will select the potential artist
+ * So we need to get the id, then we need to query the database for all albums by that artist and then we need to populate the TableView
+ *
+ * ///
+ * But hang on a minute, our current TableView is showing artists, we'll actually look at how to deal with that in a minute
+ * We already have a method in the Datasource that queries the albums by an artist, but the problem is that it uses the artist name passed
+ *  to it as an argument and does an INNER JOIN
+ *
+ * We could use it, but since we know what the artist id is, let's use that instead
+ * This is because querying based on an integer and without using a JOIN will actually be much quicker and that could make a significant
+ *  difference especially if you're dealing with large data sets
+ *
+ * We'll still use a PreparedStatement and since the user can't sort the data or tell us how they want it sorted, we'll always display the
+ *  results in ASC order
+ *
+ * When it comes to sorting, we may want the results return sorted as we do, or we may want the application to sort them.
+ * We then have to decide based on the characteristics of the application we're working on for example, how large we expect return data sets
+ *  to be or whether the user can change the sort order
+ *
+ * So let's proceed and add the Constant for querying based on the artist id
+ *
+ *       public static final String QUERY_ALBUMS_BY_ARTIST_ID = "SELECT * FROM " + TABLE_ALBUMS +
+            " WHERE " + COLUMN_ALBUM_ARTIST + " = ? ORDER BY " + COLUMN_ALBUM_NAME + " COLLATE NOCASE";
+ *
+ *
+ * Then add PreparedStatement instance variable
+ *
+ *      private PreparedStatement queryAlbumByArtistId;
+ *
+ * Then initialize our instance variable in the open()
+ *
+ *      queryAlbumByArtistId = conn.prepareStatement(QUERY_ALBUMS_BY_ARTIST_ID);
+ *
+ * And close the associated resources related to queryAlbumByArtistId ResultSet
+ *
+ *       if (queryAlbumByArtistId != null)
+            queryAlbumByArtistId.close();
+ *
+ * Then add queryAlbumsForArtistId(int id) to get the albums for an artist
+ *  - Takes an artist id
+ *  - Return a List<Album> objects
+ *
+ *       queryAlbumByArtistId.setInt(1,id);
+         ResultSet resultSet = queryAlbumByArtistId.executeQuery();
+
+         List<Album albumsList = new ArrayList<>();
+         while(resultSet.next()){
+            Album album = new Album();
+
+            album.setId(resultSet.getInt(1));
+            album.setName(resultSet.getString(2));
+            album.setArtistId(id);
+
+            albumsList.add(album);
+        }
+        return albumsList;
+ *  - Catch any SQLException if any
+ *      - Print error message to the user
+ *      - return null
+ *
+ * ///////
+ * At this point we can now get a List<Album> - a list of albums - based on an artist id
+ * But now we need a way to display them ,
+ * What we're going to do is reuse the existing table to do this and only display the album name
+ *
+ * Fortunately, the Artist and Album classes , stores the artist name in a variable name
+ * Therefore the Data Binding will work for both types of data
+ * This is probably bit of a hack, and we wouldn't really do this in a real world application
+ * We'd probably get around that by having multiple tables each on a tab or perhaps have multiple tables but only 1 visible at a time
+ *
+ * Another way to do this is to use a Combo box, like the SQLite Browser does and display the selected table , but since this is not
+ *  a UI lecture, we're going to go down the easiest route
+ *
+ * We could refactor the fx-id and the artistTable variable names, but we're going to leave them as they are as well
+ *
+ * //////// Event Handler
+ *
+ * But we'll need an event handler that will respond when the user selects an artist and clicks the "Show Albums(artist) Button" in our
+ *  GUI interface
+ * And it's going to be very similar to the one displaying the List of Artists
+ * But since we're only going to call it when the button is pressed, we can go ahead and use an anonymous task for this
+ *
+ * So, let's go to the Controller.java and write the event handler for the queryAlbumsByArtist button
+ *
+ *      @FXML
+        public void listAlbumsForArtist(){
+        final Artist artist = (Artist) artistTable.getSelectionModel().getSelectedItem();
+
+        if (artist == null) {
+            System.out.println("NO ARTIST SELECTED");
+            return;
+        }
+        Task<ObservableList<Album>> task = new Task<ObservableList<Album>>() {
+            @Override
+            protected ObservableList<Album> call() throws Exception {
+                return FXCollections.observableArrayList(
+                        Datasource.getInstance().queryAlbumsForArtistId(artist.getId()));
+            }
+        };
+        artistTable.itemsProperty().bind(task.valueProperty());
+
+        new Thread(task).start();
+    }
+ *
+ * We then need to do some changes in 2 places
+ *
+ *  1. In the Albums class and update the fields to use SimpleIntegerProperty and SimpleStringProperty respectively
+ *      - Similar to what we did in the Artist class
+ *
+ *      private SimpleIntegerProperty id;
+        private SimpleStringProperty name;
+        private SimpleIntegerProperty artistId;
+
+        public Album() {
+            this.id = new SimpleIntegerProperty();
+            this.name = new SimpleStringProperty();
+            this.artistId = new SimpleIntegerProperty();
+        }
+
+         public int getId() {
+            return id.get();
+        }
+
+        public void setId(int id) {
+            this.id.set(id);
+        }
+
+        - Update the other getters and setters respectively
+        - Ensure they still return primitive , int or String,
+        - And then likewise for the Setters, takes primitive types of : int or String
+
+ * But notice we're still getting an error that the property cannot be applied from the sample.model.Artist because it's looking for
+ *  Album
+ * And that's because of the definition below, because we've made it specific to an Artist
+ *
+ *       private TableView<Artist> artistTable;
+ *
+ * This is a little bit of a hack  but to get around it, we'll just remove the type and be more generic with what we're saying the TableView
+ *  contains , the error then disappears
+ * And because we've got the same property name in Album, name here which we'll be displaying on the Screen and also for artist, this will
+ *  then work
+ *
+ *  2. Bind the event handler method to our "Show Albums (artist)" button in the fxml file using onAction property
+ *
+ *      <Button onAction="#listAlbumsForArtist" maxWidth="Infinity" mnemonicParsing="false" text="Show Albums (artist)" />
+ *
+ *
+ * ///////
+ * And now if we run this, we should firstly find the list of artists that comes up correctly
+ * And then now if we select a particular artist, say "AC DC" for example and click on "Show Albums (artist)" button we get a list in this
+ *  case 2 entries for "AC DC" for the Albums
+ * And clearly we can see that it's working okay
+ *
+ *
+ *
  */
 
 public class Main extends Application {
