@@ -638,6 +638,131 @@ import java.io.IOException;
  *
  *
  *
+ *
+ * ////////////////////////
+ * Add Progress Bar
+ * ////////////////////////
+ * ////////////////////////
+ *
+ * So let's run the project again
+ * We get our artists loaded at the start and we can select a particular artist, say Fleetwood Mac and if we click "Show Album(artist)" button
+ *  we get the albums for that artist displayed
+ * Obviously, the contents of the table are being replaced by the 5 Fleetwood Mac albums that are in the database
+ *
+ * If we wanted to go back to the List of Artists, we'd have to click on the "List Artists" Button
+ * But first, we need to assign an event handler to that button
+ * What we can do is to use the same method we call from start() which is the listArtist() in this case
+ *
+ * So, first we need to annotate it so that we can attach it in our fxml file to the "List Artists" Button
+ *
+ *      <Button onAction="#listArtists" maxWidth="Infinity" mnemonicParsing="false" text="List Artists" />
+ *
+ * Now if we run this and select an artist, and click "Show Albums(artist)" , the albums for the artist are displayed
+ * And now if we click "List Artists" Button , we get the List of artists populated back on the screen
+ *
+ * One thing we have not tested is , if we haven't selected an artist in the table and we click on "Show Albums(artist)" Button,
+ * And if we do that , you notice down at the console, we get a message popping up saying "No Artist Selected"
+ *
+ * And if we select "AC DC " again, and click "Show Albums(artist)" , we get that this works and obviously we don't get another message and
+ *  then if we click "List Artists" we get the Same List of Artists populated again
+ *
+ * ////
+ * It's a bit of a hack what we've done here by using the same table for different data and we've managed it to work
+ * This would probably be the sort of thing you would do as a developer while prototyping
+ *
+ * Now let's turn to the Progress Bar that's currently in the layout but not visible
+ * We covered how to use a Progress Bar with a background task in the Threading Section, and we'll not spend too much time on the implementation
+ *  here.
+ * When we're fetching a large no of records in the database, it would be nice to let the user know that the application is working
+ *
+ * We use an indeterminate Progress Bar, because we fetch the records using one query and we don't know how many records there are
+ * Even if we queried the count, we still couldn't report progress because we get the records back in one lump rather than individually
+ * Another way of doing it possibly would be to query the records in blocks
+ * For example,
+ *  - We could ask for records 1 - 100 , then 101 - 200 etc and report progress between each query but that's probably outside of the scope
+ *     of this course
+ * So all we can really do is let the user know that the application is working
+ *
+ * First,
+ *  - Let's go to our main.fxml file and add an fx:id to our ProgressBar control and set that equal to progressBar
+ *
+ *      fx:id="progressBar"
+ *
+ * Second
+ *  - Is go back to the Controller.java and add an instance/entry/property for it
+ *
+ *      private ProgressBar progressBar;
+ *
+ * So when we're fetching data from the database, we need to make the progress bar visible
+ * And when the task completes, we need to make it invisible by setting it's visible property to false
+ *
+ *
+ * //// Implementation
+ * So let's implement this for the GetAllArtistsTask
+ * But keep in mind that we can't set the visibility from inside the call() , and that's because any code that touches a UI control has to
+ *  run on the UI thread
+ * So we'll use the task.setOnSucceeded() and task.setOnFailed() methods to set the progress bar visibility back to false
+ * Then we need to bind the progress bar to the task
+ *
+ * Note we're calling GetAllArtistsTask from listArtists() and mentioned we can't put the code in the call() because any code that touches the
+ *  a UI control has to run in the UI thread and therefore, we'll have to do it in listArtists()
+ *
+ * We'll just do this after binding artistTable (TableView) with the task
+ *
+ * So let's bind our progress bar to the Task
+ *
+ *      progressBar.progressProperty().bind(task.progressProperty());
+ *
+ * Then we'll set the visibility property to true
+ *
+ *      progressBar.setVisible(true);
+ *
+ * And finally call task.setOnSucceeded() and task.setOnFailed() and set visibility back to false
+ *
+ *      task.setOnSucceeded(e -> progressBar.setVisible(false));
+        task.setOnFailed(e -> progressBar.setVisible(false));
+
+ * This means whether we succeed or fail, we want the progress bar to disappear
+ * We're also using lambda expressions to set the progress bar visibility
+ *
+ *
+ * //////
+ * There are other setOn methods in the Task class,
+ * For example:
+ *  - We could set code to run if the task is cancelled perhaps due to user action,
+ * But in this case we only have to worry about the success and failure cases for this demo application
+ * Because our task doesn't report any progress, the progress bar will be indeterminate
+ *
+ * We could run this now, but the query completes so quickly that we wouldn't see the Progress bar
+ * So what we can do is slow things down a little bit by adding a call to Thread.sleep while we're looping through the result set in the
+ *  queryArtist() as follows
+ *
+ *      try{
+              Thread.sleep(20);
+           }catch (InterruptedException ie){
+              System.out.println("Interrupted: "+ ie.getMessage());
+        }
+ *
+ * We'll add this in the while loop and we're going to simulate a bit of a delay , so that we can see progress bar in operation
+ * We've added a code, so that for every artist, the thread is going to sleep for 20 milliseconds
+ *
+ * /////
+ *
+ * And now if we run this, we can see the progress bar down at the bottom and then it disappears once the artists are loaded up
+ *  successfully
+ * Again, we saw that it was an indeterminate progress bar, rather than showing increasing progress bar, the bar's going to animate
+ *  backwards and forwards as we saw, from left to right and then from right to left
+ * Obviously it then disappeared when the table was finished loading
+ *
+ * ///////
+ * So that's it for queries
+ *
+ * The important thing to remember is that we always want to run a query on a background thread using something like a task
+ * When we're ready to update the User Interface, we have to do so on the JavaFX application UI thread
+ * And if we're using Data Binding, the UI code will run on the UI thread automatically
+ *
+ * If not, you'd want to use Platform.runLater or a method like Task.setOnSucceeded to run the UI code on the UI thread
+ *
  */
 
 public class Main extends Application {
