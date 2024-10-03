@@ -763,6 +763,188 @@ import java.io.IOException;
  *
  * If not, you'd want to use Platform.runLater or a method like Task.setOnSucceeded to run the UI code on the UI thread
  *
+ *
+ *
+ *
+ * ///////////////////////////
+ *
+ * Handling Updates
+ *
+ * ///////////////////////////
+ * ///////////////////////////
+ *
+ * We've finished off queries & we now got our application working nicely, but how about inserts , updates and Deletes of data
+ * How do we go about doing inserts , updates and deletes given that we've only worked on querying or SELECT ?
+ *
+ * We do handle them the same way, but the question is, how and when do we update the User Interface ?
+ *
+ * Usually, we'll already be displaying data and the user will do something like, they'll
+ *  - Add a new record
+ *  - Update a record
+ *  - Delete a record
+ *
+ * In our case, they'd probably want to update an artist name perhaps to correct a spelling error or delete an artist because they gave
+ *  the only album they had by that artist, or they want a new album which could result in adding a new record to the artist's table
+ *
+ * So we want to keep the database and the UI in sync
+ * There are a couple of ways to do this:
+ *  1. Re-query the database after every successful insert , update and delete
+ *      - And when working with a small data sets like the artists table, that's okay, but might not make sense for large data sets
+ *
+ *  2. To perform the database operation and then manually update the UI - We wouldn't re-query the database
+ *
+ *
+ * INSERT
+ * When doing an insert, we get the list the TableView is displaying and add the new artist record
+ * And because we're using data binding, when we add the new record to the list, it would then be automatically be displayed in the table
+ *
+ * UPDATE
+ * We'd get the list the TableView is displaying , find the record and update the field
+ * And because of the data binding, the change will be reflected in the table
+ *
+ * DELETE
+ * Same deal as insert except that we'd actually delete the record
+ *
+ * We'll update the UI after the database operation has successfully completed, if something goes wrong, it's likely that the database
+ *  operation will fail
+ * So we don't want to update the UI first, because if the database operation fails, the UI will be out of sync with the database
+ * But if the database operation succeeds, but for some reason , the User Interface update fails, that's not really as bad
+ * The user won't see the change but most likely there'll be a refresh button either in our application or on the browser they're using
+ *  if they're using a web application
+ * Worst case though, they'd have to refresh the data to see the change just as we sometimes have to do that when using the SQLite browser
+ *  and they'd only have to do this if the user interface update failed and that would probably be pretty rare
+ *
+ * So how does that translate into code ?
+ *
+ * So it would run the insert, update or delete using a Task and then we'd run the UI update using the Task.setOnSucceeded()
+ * So let's go ahead and write the method for updating
+ * To avoid having to code a dialog box, we're going to assume that the user wants to change the name of "AC DC" to "AC/DC"
+ *
+ * We're going to assume that the:
+ *  - user press the button update
+ *  - we've displayed a dialog box, showing the current name of the selected list
+ *  - and they've typed in "AC/DC" and press the OK button
+ *
+ * Now because we have the selected artist, we know what the artist id is & we'd use it to update the appropriate record in the database
+ *  and we'd then update the selected artist record and the table would update
+ *
+ * Let's open our Datasource class, we need an Update Constant , create a new PreparedStatement instance and initialize it in the open() and
+ *  close it in the close()
+ *
+ * So, let's start with the UPDATE constant
+ *
+ *      public static final String UPDATE_ARTIST_NAME = "UPDATE "+ TABLE_ARTISTS +" SET "+ COLUMN_ARTIST_NAME +
+            " = ? WHERE "+ COLUMN_ARTIST_ID +" = ?";
+ *
+ * Then, the PreparedStatement instance variable
+ *
+ *      private PreparedStatement updateArtistName;
+ *
+ * Initialize te instance variable in the open()
+ *
+ *       updateArtistName = conn.prepareStatement(UPDATE_ARTIST_NAME);
+ *
+ * And close it in the close()
+ *
+ *       if (updateArtistName != null)
+             updateArtistName.close();
+ *
+ * Then we need to add the method to update an artist name ,
+ * It will take artist id and the new name as parameters and return true if the update succeeded and false otherwise
+ *
+ *      public boolean updateArtistName(int id , String newName){
+        try{
+            updateArtistName.setString(1,newName);
+            updateArtistName.setInt(2,id);
+            int affectedRecords = updateArtistName.executeUpdate();
+
+            return affectedRecords == 1;
+
+        }catch (SQLException exc){
+            System.out.println("Update Artist name Failed: "+exc.getMessage());
+            return false;
+        }
+     }
+ *
+ *  - Pass the parameters to the updateArtistName PreparedStatement instance
+ *      - the first parameter is the String , the name to update to
+ *      - the second parameter is the id , the corresponding artist id
+ *
+ *  - call executeUpdate on the updateArtistName PreparedStatement instance
+ *  - return true if the affected rows is equal to 1 , otherwise false
+ *
+ *
+ * We need to add the event handler for the "Update Artist" Button to the controller which will look similar to what we have done
+ *
+ *      @FXML
+        public void updateArtist(){
+            final Artist artist = (Artist) artistTable.getItems().get(2);
+
+            Task<Boolean> task = new Task<Boolean>() {
+                @Override
+                protected Boolean call() throws Exception {
+                    return Datasource.getInstance().updateArtistName(artist.getId() ,"AC/DC");
+                }
+            };
+
+        task.setOnSucceeded(e -> {
+            if (task.valueProperty().get()){
+                artist.setName("AC/DC");
+                artistTable.refresh();
+            }
+        });
+
+        new Thread(task).start();
+    }
+ *
+ * Let's take a look at what the updateArtist() is doing
+ *
+ * First,
+ *  - We're getting the actual record that we want to update
+ *  - Normally we'd get this by calling artistTable.getSelectionModel().getSelectedItem() as shown below
+ *
+ *      final Artist artist = (Artist) artistTable.getSelectionModel().getSelectedItem();
+ *
+ *  - But the reason we're doing this, is we're simulating this to avoid having to create a dialogue that accepts a new name, but as
+ *     an OPTIONAL exercise we can go ahead and do that
+ *  - We will see from the data being displayed that "AC DC" is in Position 3, and we're going to get that record from the TableView items
+ *     which will be index 2 and so that's where the .get(2) comes from
+ *
+ * Second,
+ *  - When we run the task, that we've defined is going to be calling the updateArtistName passing the id from the first entry and we're
+ *     passing the new name which is going to have a slash in between AC and DC
+ *  - Also notice that the actual Task returns a Boolean and that's because the updateArtistName() returns a boolean
+ *
+ * Third,
+ *  - When the Task succeeds, we're going to check the value returned by the method tasks.valueProperty().get()
+ *  - If it's true, meaning that the update succeeded, then we'll go ahead and update the UI
+ *      - We'll change the artist name to "AC/DC"
+ *  - And we then refresh the table
+ *
+ * We should not have to manually refresh the table, but there's a bug in the current version of JavaFX when it comes to TableViews and
+ *  ObservableLists
+ * The TableView is not noticing when an element in the list changes
+ * This is actually a work around to force a refresh and in fact the refresh() was only added in the java 8u60 perhaps in response to this bug
+ *
+ *
+ * /////
+ * The refresh() forces the TableView to redraw it's visible area and it won't redraw rows that are off the screen
+ *
+ *
+ * ////
+ *
+ * And now when we run this, we should now be able to click on the "Update Artist" button, and see "AC DC" change to "AC/DC"
+ * But before we do that we need to bind our updateArtist event handler to "Update Artist" button
+ *
+ *      <Button onAction="#updateArtist" maxWidth="Infinity" mnemonicParsing="false" text="Update Artist" />
+ *
+ * ANd now if we run this and click on "Update Artist" button , we can now see that "AC DC" changed to "AC/DC" in the TableView
+ *
+ * And now if we close the application, we should find that "AC/DC" is showing, which tells us also that the Database was also updated
+ *  correctly
+ *
+ *
+ *
  */
 
 public class Main extends Application {
